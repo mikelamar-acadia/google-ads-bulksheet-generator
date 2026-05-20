@@ -114,4 +114,36 @@ with st.sidebar:
 col1, col2 = st.columns([1, 2])
 with col1:
     website_url = st.text_input("Client Website URL", placeholder="https://acadia.io")
-    st.info("The algorithm will auto-detect the Brand Name, build clean Brand ad
+    st.info("The algorithm will auto-detect the Brand Name, build clean Brand ad groups, and systematically slice up Non-Brand service/product categories based on the business offerings.")
+
+with col2:
+    onboarding_notes = st.text_area("Optional Discovery Notes / Core Guidelines", placeholder="Paste any optional discovery documentation, target audiences, or value propositions here to refine the output...", height=175)
+
+if st.button("Execute Deep Account Mapping", type="primary"):
+    if not api_key or not website_url:
+        st.error("Please provide both your OpenAI API Key and the target Client Website URL.")
+    else:
+        with st.spinner("Analyzing target ecosystem, engineering keyword arrays, and writing copy structures..."):
+            try:
+                # Core processing pass
+                ai_output = generate_marketing_plan(website_url, onboarding_notes, api_key)
+                df_output = build_google_ads_csv(ai_output, website_url)
+                
+                # Interface updates
+                st.success(f"🎉 Architecture mapped for brand: **{ai_output.client_detected_name.upper()}**")
+                
+                st.subheader("Extracted Core Brand Assets")
+                st.write(", ".join(ai_output.suggested_brand_variations))
+                
+                st.subheader("Generated Google Ads Bulksheet Preview")
+                st.dataframe(df_output)
+                
+                csv_bytes = df_output.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Ready-to-Import Google Ads Editor CSV",
+                    data=csv_bytes,
+                    file_name=f"{ai_output.client_detected_name.lower().replace(' ', '_')}_google_ads_import.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"An error occurred during matrix compilation: {e}")
