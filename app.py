@@ -5,15 +5,15 @@ from pydantic import BaseModel, Field
 from typing import List
 
 # ==========================================
-# 1. NEW COMPREHENSIVE ACCOUNT DATA SCHEMAS
+# 1. ENTERPRISE DATA MODELS & SCHEMAS
 # ==========================================
 class AdCopySchema(BaseModel):
-    headlines: List[str] = Field(description="Generate exactly 15 distinct, high-converting headlines. Max 30 characters each. Must include brand or target keywords and clear action hooks.")
-    descriptions: List[str] = Field(description="Generate exactly 4 comprehensive descriptions. Max 90 characters each. Highlight unique differentiators.")
+    headlines: List[str] = Field(description="Generate exactly 15 distinct headlines. Max 30 characters each. Focus on hooks, brand authority, and CTAs.")
+    descriptions: List[str] = Field(description="Generate exactly 4 comprehensive descriptions. Max 90 characters each.")
 
 class AdGroupSchema(BaseModel):
-    ad_group_name: str = Field(description="Granular ad group name focusing on a tight semantic sub-category or product feature set.")
-    seed_keywords: List[str] = Field(description="Generate 15 to 25 highly relevant seed keywords for this specific intent bucket. Mix short-tail and long-tail. No match type punctuation.")
+    ad_group_name: str = Field(description="Granular ad group name focusing on a tight semantic sub-category, service pillar, or brand variation bucket.")
+    seed_keywords: List[str] = Field(description="Generate 15 to 25 highly relevant seed keywords for this specific intent bucket. No match type punctuation.")
     ad_copy: AdCopySchema
 
 class CampaignSchema(BaseModel):
@@ -21,14 +21,15 @@ class CampaignSchema(BaseModel):
     campaign_type: str = Field(description="Must be exactly either 'Brand' or 'Non-Brand'")
     ad_groups: List[AdGroupSchema] = Field(description="List of granular ad groups built to live inside this specific campaign.")
 
-# This wrapper object allows the AI to return a completely unlimited array of campaigns
+# Updated to support campaign-level and account-level negative keywords
 class AccountBuildSchema(BaseModel):
     client_detected_name: str = Field(description="The clean, standardized brand name extracted from the URL or text context.")
-    suggested_brand_variations: List[str] = Field(description="Core brand words and common typos/phrases to use for the Brand Campaign.")
-    campaigns: List[CampaignSchema] = Field(description="Comprehensive list of multiple distinct campaigns (Must include 1 Brand Campaign and 1 consolidated Non-Brand Campaign with deeply itemized ad groups).")
+    suggested_brand_variations: List[str] = Field(description="Core clean brand terms and structural combinations to use for the Brand Campaign.")
+    campaigns: List[CampaignSchema] = Field(description="Comprehensive list of multiple distinct campaigns (1 Brand Campaign and 1 consolidated Non-Brand Campaign).")
+    account_level_negatives: List[str] = Field(description="Generate a list of 30-50 highly critical negative keywords tailored specifically to this business context (e.g., jobs, cheap, templates, courses, free, DIY, unrelated niches).")
 
 # ==========================================
-# 2. UPGRADED AI ENGINE
+# 2. ADVANCED AI ENGINE FUNCTION
 # ==========================================
 def generate_marketing_plan(website_url: str, onboarding_notes: str, api_key: str):
     client = OpenAI(api_key=api_key)
@@ -38,17 +39,20 @@ def generate_marketing_plan(website_url: str, onboarding_notes: str, api_key: st
     
     CRITICAL BUILDING PROTOCOLS:
     1. EXTRACT BRAND: Figure out the clean brand name from the URL and use it to form the naming conventions.
-    2. ARCHITECT THE CAMPAIGN ARRAY: You must generate multiple separate campaigns in the response:
-       - Campaign A: The official Brand Campaign. Title it '[Brand Name] | Search | Brand'. Under it, create multiple brand ad groups (e.g., 'Brand Core', 'Brand + Services', 'Brand Core Misspellings'). Populate with keywords strictly using the variations of the company name.
-       - Campaign B: The Non-Brand Category Campaign. Title it '[Brand Name] | Search | Non-Brand'. Under it, analyze the website offerings and break them out into deeply granular, highly distinct sub-category Ad Groups. Do not group unrelated service pillars.
-    3. KEYWORD EXPANSION: Provide a massive list of 15 to 25 seed keywords PER ad group. 
-    4. RESPONSIVE SEARCH ADS (RSAs): For every single ad group, provide exactly 15 headlines (<30 chars) and 4 descriptions (<90 chars). Ensure high semantic variation.
+    2. BRAND CAMPAIGN STRUCTURE & ZERO MISSPELLINGS: 
+       - Title it '[Brand Name] | Search | Brand'. Under it, create multiple clean brand ad groups (e.g., 'Brand Core', 'Brand + Services', 'Brand + Intent').
+       - CRITICAL RULE: Do NOT misspell the brand name under any circumstances. Keep the brand name spelled 100% correctly across all keywords. Focus instead on structural intent variations (e.g., if brand is 'Acadia', generate 'Acadia marketing', 'Acadia agency', 'Acadia performance', 'Acadia company').
+    3. NON-BRAND CAMPAIGN STRUCTURE:
+       - Title it '[Brand Name] | Search | Non-Brand'. Under it, analyze the website offerings and break them out into deeply granular, highly distinct sub-category Ad Groups. Do not group unrelated service pillars.
+    4. KEYWORD EXPANSION: Provide a massive list of 15 to 25 seed keywords PER ad group. 
+    5. RESPONSIVE SEARCH ADS (RSAs): For every single ad group, provide exactly 15 headlines (<30 chars) and 4 descriptions (<90 chars). Ensure high semantic variation.
+    6. NEGATIVE KEYWORD EXTRACTION: Scrutinize the onboarding notes and website context to generate a robust list of highly relevant negative keywords to prevent budget waste (e.g., filter out careers, low-intent information seekers, or adjacent industries).
     """
 
     completion = client.beta.chat.completions.parse(
         model="gpt-4o-2024-08-06",
         messages=[
-            {"role": "system", "content": "You are an advanced programmatic campaign architect who outputs flawless, exhaustive multi-campaign digital marketing arrays."},
+            {"role": "system", "content": "You are an advanced programmatic campaign architect who outputs flawless, exhaustive multi-campaign digital marketing arrays with strict structural rules."},
             {"role": "user", "content": prompt}
         ],
         response_format=AccountBuildSchema, 
@@ -61,11 +65,10 @@ def generate_marketing_plan(website_url: str, onboarding_notes: str, api_key: st
 def build_google_ads_csv(account_data: AccountBuildSchema, final_url: str):
     rows = []
     
-    # Loop through the list of multiple campaigns generated by the AI
+    # Process regular campaigns, ad groups, keywords, and ads
     for campaign in account_data.campaigns:
         camp_name = campaign.campaign_name
         
-        # Loop through the ad groups inside this specific campaign
         for ad_group in campaign.ad_groups:
             ag_name = ad_group.ad_group_name
             
@@ -114,7 +117,7 @@ with st.sidebar:
 col1, col2 = st.columns([1, 2])
 with col1:
     website_url = st.text_input("Client Website URL", placeholder="https://acadia.io")
-    st.info("The algorithm will auto-detect the Brand Name, build clean Brand ad groups, and systematically slice up Non-Brand service/product categories based on the business offerings.")
+    st.info("""The algorithm will auto-detect the Brand Name, build clean Brand ad groups, and systematically slice up Non-Brand service/product categories based on the business offerings.""")
 
 with col2:
     onboarding_notes = st.text_area("Optional Discovery Notes / Core Guidelines", placeholder="Paste any optional discovery documentation, target audiences, or value propositions here to refine the output...", height=175)
@@ -132,8 +135,18 @@ if st.button("Execute Deep Account Mapping", type="primary"):
                 # Interface updates
                 st.success(f"🎉 Architecture mapped for brand: **{ai_output.client_detected_name.upper()}**")
                 
-                st.subheader("Extracted Core Brand Assets")
-                st.write(", ".join(ai_output.suggested_brand_variations))
+                # Layout split for display
+                disp_col1, disp_col2 = st.columns(2)
+                
+                with disp_col1:
+                    st.subheader("Core Brand Combinations")
+                    st.write(", ".join(ai_output.suggested_brand_variations))
+                
+                with disp_col2:
+                    st.subheader("🛑 Recommended Account Negative Keywords")
+                    # Display negatives in a clean text area for quick copying
+                    negatives_text = "\n".join(ai_output.account_level_negatives)
+                    st.text_area("Copy and paste directly into Google Ads Negative Lists:", value=negatives_text, height=150)
                 
                 st.subheader("Generated Google Ads Bulksheet Preview")
                 st.dataframe(df_output)
