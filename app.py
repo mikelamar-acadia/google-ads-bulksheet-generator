@@ -4,7 +4,9 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List
 
-# 1. Define Expanded Data Schemas for Enterprise Scale
+# ==========================================
+# 1. DEFINE DATA SCHEMAS (Pydantic models)
+# ==========================================
 class AdCopySchema(BaseModel):
     headlines: List[str] = Field(description="Generate exactly 15 distinct, high-converting headlines. Max 30 characters each. Must include brand name, keywords, and strong CTAs.")
     descriptions: List[str] = Field(description="Generate exactly 4 comprehensive descriptions. Max 90 characters each. Highlight value props and CTAs.")
@@ -19,7 +21,9 @@ class CampaignSchema(BaseModel):
     campaign_type: str = Field(description="Either 'Brand' or 'Non-Brand'")
     ad_groups: List[AdGroupSchema] = Field(description="A comprehensive list of every possible sub-category ad group implied by the client's services.")
 
-# 2. Upgraded Deep-Analysis AI Engine (With Brand Campaign Logic)
+# ==========================================
+# 2. AI ENGINE FUNCTION
+# ==========================================
 def generate_marketing_plan(client_name: str, brand_terms: str, website_context: str, onboarding_notes: str, api_key: str):
     client = OpenAI(api_key=api_key)
     
@@ -62,7 +66,9 @@ def generate_marketing_plan(client_name: str, brand_terms: str, website_context:
     )
     return completion.choices[0].message.parsed
 
-# 3. Enhanced Bulksheet Formatting Engine
+# ==========================================
+# 3. BULKSHEET FORMATTING ENGINE
+# ==========================================
 def build_google_ads_csv(parsed_data: CampaignSchema, final_url: str):
     rows = []
     
@@ -86,8 +92,6 @@ def build_google_ads_csv(parsed_data: CampaignSchema, final_url: str):
             
         # B. Process Complete RSA Ad Copy Row
         ads = campaign.ad_copy
-        
-        # Build out a safely padded dictionary mapping all 15 headlines and 4 descriptions
         ad_row = {
             "Campaign": camp_name, "Ad Group": ag_name, "Criterion Type": "", "Keyword": "",
             "Final URL": final_url
@@ -103,7 +107,9 @@ def build_google_ads_csv(parsed_data: CampaignSchema, final_url: str):
         
     return pd.DataFrame(rows)
 
-# 4. Web Interface Layout
+# ==========================================
+# 4. WEB INTERFACE LAYOUT & RUN BUTTON CODE
+# ==========================================
 st.set_page_config(page_title="AI Bulksheet Generator", layout="wide")
 st.title("🚀 Google Ads Automation Tool")
 
@@ -114,7 +120,35 @@ with st.sidebar:
 col1, col2 = st.columns(2)
 with col1:
     client_name = st.text_input("Client Brand Name", placeholder="e.g., Acadia")
-    brand_terms = st.text_input("Brand Name Variations / Core Brand Terms", placeholder="e.g., Acadia, Acadia.io, Team Acadia, Acadia Marketing")
+    brand_terms = st.text_input("Brand Name Variations / Core Brand Terms", placeholder="e.g., Acadia, Acadia.io, Team Acadia")
     website_url = st.text_input("Client Website URL", placeholder="https://acadia.io")
 with col2:
     onboarding_notes = st.text_area("Onboarding & Discovery Notes", placeholder="Paste questionnaire data here...", height=150)
+
+# THIS IS THE RUN BUTTON CODE BLOCK AT THE VERY BOTTOM
+if st.button("Generate Bulksheet Architecture", type="primary"):
+    if not api_key or not client_name or not website_url or not brand_terms:
+        st.error("Please fill in all fields, including Brand Terms.")
+    else:
+        with st.spinner("Analyzing data and constructing campaign matrices..."):
+            try:
+                mock_scraped_data = f"Domain: {website_url}. Main category mapping based on brand values."
+                
+                # Triggers the AI logic
+                ai_output = generate_marketing_plan(client_name, brand_terms, mock_scraped_data, onboarding_notes, api_key)
+                # Triggers the CSV math logic
+                df_output = build_google_ads_csv(ai_output, website_url)
+                
+                st.success("🎉 Account Structure Created!")
+                st.dataframe(df_output)
+                
+                # Allows your team to download the final CSV
+                csv_bytes = df_output.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Download Google Ads Editor CSV",
+                    data=csv_bytes,
+                    file_name=f"{client_name.lower().replace(' ', '_')}_google_ads_import.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
