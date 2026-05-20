@@ -19,12 +19,15 @@ class CampaignSchema(BaseModel):
     campaign_type: str = Field(description="Either 'Brand' or 'Non-Brand'")
     ad_groups: List[AdGroupSchema] = Field(description="A comprehensive list of every possible sub-category ad group implied by the client's services.")
 
-# 2. Upgraded Deep-Analysis AI Engine
-def generate_marketing_plan(client_name: str, website_context: str, onboarding_notes: str, api_key: str):
+# 2. Upgraded Deep-Analysis AI Engine (With Brand Campaign Logic)
+def generate_marketing_plan(client_name: str, brand_terms: str, website_context: str, onboarding_notes: str, api_key: str):
     client = OpenAI(api_key=api_key)
     
     prompt = f"""
     You are a Master Performance Marketing Architect. Your goal is to build an exhaustive, enterprise-grade Google Ads search account structure for '{client_name}'.
+    
+    Core Brand Terms to use for the Brand Campaign:
+    {brand_terms}
     
     Website & Core Service Framework:
     {website_context}
@@ -33,10 +36,20 @@ def generate_marketing_plan(client_name: str, website_context: str, onboarding_n
     {onboarding_notes}
     
     STRICT COMPREHENSIVE BUILDING RULES:
-    1. GRANULARITY IS KEY: Do not lump services together. Create highly granular, distinct Ad Groups for every sub-service, specific platform capability, or niche angle mentioned in the context. For Acadia, do not just make a 'Paid Media' ad group; break it down into 'Paid Search Agency', 'Paid Social Specialists', 'Programmatic Advertising', etc.
-    2. KEYWORD VOLUME: Provide a massive list of 15 to 25 seed keywords PER ad group. Include high-intent commercial variations (e.g., 'agency', 'services', 'company', 'firm', 'consulting', 'management').
-    3. MAX OUT AD COPY: For every single ad group, you must provide exactly 15 headlines and 4 descriptions. Ensure dynamic variation: some headlines must be purely keyword-focused, some benefit-focused, and some CTA-focused.
-    4. ACCURATE LENGTHS: Keep every single headline under 30 characters and every description under 90 characters. Absolutely no exceptions.
+    1. CAMPAIGN SPLIT: You must generate ONE Brand Campaign AND ONE Non-Brand Campaign.
+    
+    2. BRAND CAMPAIGN STRUCTURE: 
+       - Build a Campaign named '{client_name} | Search | Brand'.
+       - Create granular Brand Ad Groups (e.g., 'Brand Core', 'Brand + Services', 'Brand + Agency/Company').
+       - Populate them with 10-15 high-intent keyword variations strictly combining the provided brand terms ({brand_terms}) with intent words (e.g., '{client_name} agency', '{client_name} performance marketing', etc.).
+       - Ad copy for this campaign must heavily emphasize the official site, brand heritage, and core value props.
+
+    3. NON-BRAND CAMPAIGN STRUCTURE:
+       - Build a Campaign named '{client_name} | Search | Non-Brand'.
+       - Create highly granular, distinct Ad Groups for every sub-service, specific platform capability, or niche angle mentioned in the context. For Acadia, break it down into 'Paid Search Agency', 'Paid Social Specialists', 'Programmatic Advertising', 'Retail Media Services', etc.
+       - Provide 15 to 25 seed keywords PER ad group. Include high-intent commercial variations (e.g., 'agency', 'services', 'company'). Do not include brand names here.
+
+    4. MAX OUT AD COPY: For every single ad group (Brand and Non-Brand), you must provide exactly 15 headlines (<30 chars) and 4 descriptions (<90 chars). Ensure dynamic variation.
     """
 
     completion = client.beta.chat.completions.parse(
@@ -100,29 +113,8 @@ with st.sidebar:
 
 col1, col2 = st.columns(2)
 with col1:
-    client_name = st.text_input("Client Brand Name", placeholder="e.g., Acme Corp")
-    website_url = st.text_input("Client Website URL", placeholder="https://www.acme.com")
+    client_name = st.text_input("Client Brand Name", placeholder="e.g., Acadia")
+    brand_terms = st.text_input("Brand Name Variations / Core Brand Terms", placeholder="e.g., Acadia, Acadia.io, Team Acadia, Acadia Marketing")
+    website_url = st.text_input("Client Website URL", placeholder="https://acadia.io")
 with col2:
     onboarding_notes = st.text_area("Onboarding & Discovery Notes", placeholder="Paste questionnaire data here...", height=150)
-
-if st.button("Generate Bulksheet Architecture", type="primary"):
-    if not api_key or not client_name or not website_url:
-        st.error("Please fill in all fields.")
-    else:
-        with st.spinner("Analyzing data..."):
-            try:
-                mock_scraped_data = f"Domain: {website_url}. Main category mapping based on brand values."
-                ai_output = generate_marketing_plan(client_name, mock_scraped_data, onboarding_notes, api_key)
-                df_output = build_google_ads_csv(ai_output, website_url)
-                st.success("🎉 Account Structure Created!")
-                st.dataframe(df_output)
-                
-                csv_bytes = df_output.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📥 Download Google Ads Editor CSV",
-                    data=csv_bytes,
-                    file_name=f"{client_name.lower().replace(' ', '_')}_google_ads_import.csv",
-                    mime="text/csv"
-                )
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
