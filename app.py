@@ -104,11 +104,11 @@ def build_google_ads_csv(account_data: AccountBuildSchema, final_url: str):
     return pd.DataFrame(rows)
 
 # ==========================================
-# 4. SIMPLIFIED USER INTERFACE
+# 4. BRANDED USER INTERFACE
 # ==========================================
-st.set_page_config(page_title="AI Bulksheet Generator", layout="wide")
-st.title("🚀 Enterprise Google Ads Setup Engine")
-st.subheader("Wipe out manual building. Drop a URL and map an entire account structural bulk file.")
+st.set_page_config(page_title="Project Genesis", layout="wide")
+st.title("⚡ Project Genesis")
+st.subheader("The Enterprise Google Ads Inception Engine. Launch flawlessly from scratch in 90 seconds.")
 
 with st.sidebar:
     st.header("Authorization")
